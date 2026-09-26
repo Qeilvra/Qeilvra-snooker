@@ -44,7 +44,7 @@ export async function completeSale(_: SaleState, formData: FormData): Promise<Sa
       if (message.includes("permission")) return { error: "Manager approval is required." };
       return { error: "The sale could not be completed. No payment or stock change was recorded." };
     }
-    revalidatePath("/dashboard"); revalidatePath("/tables"); revalidatePath("/pos"); revalidatePath("/orders"); revalidatePath("/inventory");
+    revalidatePath("/dashboard"); revalidatePath("/tables"); revalidatePath("/pos"); revalidatePath("/orders"); revalidatePath("/inventory"); revalidatePath("/reports");
     const order = data as { id: string; order_number: string };
     return { success: "Payment recorded and order completed.", orderId: order.id, orderNumber: order.order_number };
   } catch (error) {

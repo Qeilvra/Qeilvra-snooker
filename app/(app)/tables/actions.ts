@@ -15,7 +15,7 @@ export async function startSession(_: ActionState, formData: FormData): Promise<
     if (!can(profile.role, "sessions.use")) return { error: "You do not have permission to start a session." };
     const { error } = await supabase.rpc("start_table_session", { p_table_id: tableId.data });
     if (error) return { error: error.message.includes("available") ? "This table is no longer available." : "The session could not be started." };
-    revalidatePath("/dashboard"); revalidatePath("/tables"); revalidatePath("/pos");
+    revalidatePath("/dashboard"); revalidatePath("/tables"); revalidatePath("/pos"); revalidatePath("/reports");
     return { success: "Session started." };
   } catch (error) { console.error("Start session failed", error); return { error: "The session could not be started." }; }
 }
@@ -28,7 +28,7 @@ export async function endSession(formData: FormData) {
     if (!can(profile.role, "sessions.use")) return;
     const { error } = await supabase.rpc("end_table_session", { p_session_id: sessionId.data, p_rounding_minutes: 1 });
     if (error) return;
-    revalidatePath("/dashboard"); revalidatePath("/tables"); revalidatePath("/pos");
+    revalidatePath("/dashboard"); revalidatePath("/tables"); revalidatePath("/pos"); revalidatePath("/reports");
   } catch (error) { console.error("End session failed", error); }
 }
 

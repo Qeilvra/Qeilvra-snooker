@@ -39,7 +39,7 @@ export function AppShell({ profile, club, children }: { profile: Profile; club: 
           {nav.map(([href,label,Icon]) => <Link key={href} href={href} className={`nav-link ${pathname === href ? "active" : ""}`}><Icon size={19}/><span>{label}</span></Link>)}
         </nav>
         <div className="sidebar-foot">
-          <div className="role-chip"><span className="avatar">{initial}</span><span><strong style={{color:"white"}}>{profile.full_name}</strong><br/>{profile.role}</span><button className="icon-button" onClick={logout} aria-label="Log out"><LogOut size={17}/></button></div>
+          <div className="role-chip"><span className="avatar">{initial}</span><span><strong style={{color:"white"}}>{profile.full_name}</strong><br/>{profile.role}</span><button className="icon-button" onClick={logout} aria-label="Log out" title="Log out"><LogOut size={17}/></button></div>
         </div>
       </aside>
       <main className="app-body">
@@ -58,7 +58,7 @@ export function AppShell({ profile, club, children }: { profile: Profile; club: 
           {mobile.map(([href,label,Icon]) => <Link key={href} href={href} className={pathname === href ? "active" : ""}><Icon size={21}/><span>{label}</span></Link>)}
           <button type="button" className={mobileMoreActive ? "active" : ""} onClick={() => setMobileMenuOpen((open) => !open)} aria-expanded={mobileMenuOpen} aria-controls="mobile-menu"><MoreHorizontal size={21}/><span>More</span></button>
         </nav>
-        {mobileMenuOpen && <section className="mobile-menu" id="mobile-menu" aria-label="More navigation"><div className="mobile-menu-head"><strong>More</strong><button type="button" className="icon-button" onClick={() => setMobileMenuOpen(false)} aria-label="Close menu">×</button></div><div className="mobile-menu-links">{nav.map(([href,label,Icon]) => <Link key={href} href={href} onClick={() => setMobileMenuOpen(false)} className={pathname === href ? "active" : ""}><Icon size={20}/><span>{label}</span></Link>)}</div></section>}
+        {mobileMenuOpen && <section className="mobile-menu" id="mobile-menu" aria-label="More navigation"><div className="mobile-menu-head"><strong>More</strong><button type="button" className="icon-button" onClick={() => setMobileMenuOpen(false)} aria-label="Close menu">×</button></div><div className="mobile-menu-links">{nav.map(([href,label,Icon]) => <Link key={href} href={href} onClick={() => setMobileMenuOpen(false)} className={pathname === href ? "active" : ""}><Icon size={20}/><span>{label}</span></Link>)}<button type="button" className="mobile-menu-logout" onClick={logout}><LogOut size={20}/><span>Log out</span></button></div></section>}
       </main>
     </div>
   );

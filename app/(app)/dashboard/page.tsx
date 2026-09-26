@@ -6,6 +6,7 @@ import { TableBrowser } from "@/components/table-browser";
 import { PosPanel } from "@/components/pos-panel";
 import { EmptyState } from "@/components/empty-state";
 import { SessionTimer } from "@/components/session-timer";
+import { totalRecognizedRevenue } from "@/lib/revenue";
 import type { Booking, Order, Product, SnookerTable, TableSession } from "@/types/domain";
 
 export const metadata = { title: "Dashboard" };
@@ -17,21 +18,25 @@ export default async function DashboardPage() {
   const reservationHorizon = new Date(now.getTime() + 2 * 60 * 60 * 1000).toISOString();
   const today = dateInTimezone(now,club.timezone);
   const dayStart = localDayStartIso(now,club.timezone);
-  const [tablesResult, bookingsResult, sessionsResult, ordersResult, productsResult, settingsResult] = await Promise.all([
+  const [tablesResult, bookingsResult, sessionsResult, ordersResult, productsResult, settingsResult, revenueOrdersResult, completedSessionsResult, activeSessionCountResult] = await Promise.all([
     supabase.from("snooker_tables").select("*, table_sessions:table_sessions!sessions_table_same_club(id,table_id,start_time,end_time,total_paused_seconds,game_rate,table_charge,status), bookings:bookings!bookings_table_same_club(id,table_id,customer_name,customer_phone,booking_date,start_time,end_time,duration_minutes,game_rate,estimated_amount,status,notes)").eq("is_active",true).in("table_sessions.status",["active","paused"]).eq("bookings.status","confirmed").gte("bookings.start_time",now.toISOString()).lte("bookings.start_time",reservationHorizon).order("sort_order"),
     supabase.from("bookings").select("*, snooker_tables:snooker_tables!bookings_table_same_club(name)").eq("booking_date",today).order("start_time").limit(5),
     supabase.from("table_sessions").select("*, customers:customers!sessions_customer_same_club(full_name), snooker_tables:snooker_tables!sessions_table_same_club(name)").in("status",["active","paused"]).order("start_time").limit(6),
     supabase.from("orders").select("*, snooker_tables:snooker_tables!orders_table_same_club(name)").eq("order_status","completed").gte("created_at",dayStart).order("created_at",{ascending:false}).limit(6),
     supabase.from("products").select("*, product_categories:product_categories!products_category_same_club(name)").eq("is_active",true).order("name").limit(40),
     supabase.from("club_settings").select("key,value").eq("key","tax_rate"),
+    supabase.from("orders").select("total_amount,session_id,created_at").eq("order_status","completed").eq("payment_status","paid"),
+    supabase.from("table_sessions").select("id,table_charge,end_time").eq("status","completed"),
+    supabase.from("table_sessions").select("*", { count: "exact", head: true }).in("status",["active","paused"]),
   ]);
   const tables = (tablesResult.data ?? []) as SnookerTable[];
   const bookings = (bookingsResult.data ?? []) as Booking[];
   const sessions = (sessionsResult.data ?? []) as TableSession[];
   const orders = (ordersResult.data ?? []) as Order[];
   const products = (productsResult.data ?? []) as Product[];
-  const revenue = orders.reduce((sum,order)=>sum+Number(order.total_amount),0);
-  const usage = tables.length ? Math.round((sessions.length/tables.length)*100) : 0;
+  const revenue = totalRecognizedRevenue(revenueOrdersResult.data ?? [], completedSessionsResult.data ?? []);
+  const activeSessionCount = activeSessionCountResult.count ?? sessions.length;
+  const usage = tables.length ? Math.round((activeSessionCount/tables.length)*100) : 0;
   const activePosSession = sessions[0] ?? null;
   const settings=Object.fromEntries((settingsResult.data??[]).map(x=>[x.key,x.value]));
   const firstName = profile.full_name.split(" ")[0];
@@ -42,8 +47,8 @@ export default async function DashboardPage() {
       <div className="dashboard-main">
         <section className="metric-grid" aria-label="Club summary">
           <Metric icon={<Table2/>} label="Total Tables" value={String(tables.length)}/>
-          <Metric className="blue" icon={<UsersRound/>} label="Active Sessions" value={String(sessions.length)}/>
-          <Metric className="amber" icon={<WalletCards/>} label="Today’s Revenue" value={formatMoney(revenue,club.currency)}/>
+          <Metric className="blue" icon={<UsersRound/>} label="Active Sessions" value={String(activeSessionCount)}/>
+          <Metric className="amber" icon={<WalletCards/>} label="Total Revenue" value={formatMoney(revenue,club.currency)}/>
           <Metric className="violet" icon={<ChartNoAxesColumnIncreasing/>} label="Table Usage" value={`${usage}%`}/>
         </section>
         <section className="quick-access"><h2>Quick Access</h2><div>{[["/tables","Tables",Table2],["/bookings","Bookings",CalendarDays],["/pos","POS",CreditCard],["/orders","Orders",WalletCards],["/inventory","Inventory",Package],["/reports","Reports",ChartNoAxesColumnIncreasing]].map(([href,label,Icon])=><Link href={String(href)} key={String(href)}><Icon size={27}/><span>{String(label)}</span></Link>)}</div></section>
