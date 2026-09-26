@@ -1,9 +1,10 @@
 import Link from "next/link";
-import { CalendarPlus, Play, Square } from "lucide-react";
+import { CalendarPlus, Square } from "lucide-react";
 import { formatMoney, formatTime } from "@/lib/format";
 import { SessionTimer } from "@/components/session-timer";
 import { TableVisual } from "@/components/table-visual";
-import { endSession, startSession } from "@/app/(app)/tables/actions";
+import { endSession } from "@/app/(app)/tables/actions";
+import { StartSessionButton } from "@/components/start-session-button";
 import type { SnookerTable } from "@/types/domain";
 import { ConfirmSubmit } from "@/components/confirm-submit";
 
@@ -19,7 +20,7 @@ export function TableCard({ table, currency, timezone, compact = false }: { tabl
       <span className={`status ${effectiveStatus}`}>{statusLabel}</span>
       <div className="rate">{booking ? `Starts ${formatTime(booking.start_time, timezone)}` : `${formatMoney(table.game_rate,currency)} / game`}</div>
       <div className="card-actions">
-        {effectiveStatus === "available" && <><Link className="btn btn-sm" href={`/bookings?table=${table.id}`}><CalendarPlus size={14}/>Book</Link><form action={startSession} style={{flex:1}}><input type="hidden" name="tableId" value={table.id}/><button className="btn btn-primary btn-sm btn-block" type="submit"><Play size={14}/>Start</button></form></>}
+        {effectiveStatus === "available" && <><Link className="btn btn-sm" href={`/bookings?table=${table.id}`}><CalendarPlus size={14}/>Book</Link><StartSessionButton tableId={table.id}/></>}
         {session && <><Link className="btn btn-sm" href={`/pos?session=${session.id}`}>Add items</Link><form action={endSession} style={{flex:1}}><input type="hidden" name="sessionId" value={session.id}/><ConfirmSubmit className="btn btn-danger btn-sm btn-block" message={`End the active session on ${table.name}?`}><Square size={13}/>End</ConfirmSubmit></form></>}
         {effectiveStatus === "reserved" && <Link className="btn btn-blue btn-sm btn-block" href={`/bookings?table=${table.id}`}>View booking</Link>}
         {(table.status === "maintenance" || table.status === "inactive") && !compact && <Link className="btn btn-sm btn-block" href={`/tables?edit=${table.id}`}>Manage table</Link>}

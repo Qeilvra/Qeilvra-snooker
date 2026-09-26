@@ -7,16 +7,17 @@ import { can } from "@/lib/permissions";
 
 export type ActionState = { error?: string; success?: string; id?: string };
 
-export async function startSession(formData: FormData) {
+export async function startSession(_: ActionState, formData: FormData): Promise<ActionState> {
   const tableId = z.string().uuid().safeParse(formData.get("tableId"));
-  if (!tableId.success) return;
+  if (!tableId.success) return { error: "The selected table is invalid." };
   try {
     const { supabase, profile } = await getAppContext();
-    if (!can(profile.role, "sessions.use")) return;
+    if (!can(profile.role, "sessions.use")) return { error: "You do not have permission to start a session." };
     const { error } = await supabase.rpc("start_table_session", { p_table_id: tableId.data });
-    if (error) return;
+    if (error) return { error: error.message.includes("available") ? "This table is no longer available." : "The session could not be started." };
     revalidatePath("/dashboard"); revalidatePath("/tables"); revalidatePath("/pos");
-  } catch (error) { console.error("Start session failed", error); }
+    return { success: "Session started." };
+  } catch (error) { console.error("Start session failed", error); return { error: "The session could not be started." }; }
 }
 
 export async function endSession(formData: FormData) {
