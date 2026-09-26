@@ -3,13 +3,19 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import type { Club, Profile } from "@/types/domain";
 
-export const getAppContext = cache(async () => {
+export const getAuthenticatedContext = cache(async () => {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect("/login");
   const { data: profile } = await supabase.from("profiles").select("*").eq("auth_user_id", user.id).eq("is_active", true).single();
-  if (!profile) throw new Error("Active staff profile not found");
+  if (!profile) return { supabase, user, profile: null, club: null };
   const { data: club } = await supabase.from("clubs").select("*").eq("id", profile.club_id).single();
+  return { supabase, user, profile, club };
+});
+
+export const getAppContext = cache(async () => {
+  const { supabase, user, profile, club } = await getAuthenticatedContext();
+  if (!profile) throw new Error("Active staff profile not found");
   if (!club) throw new Error("Club not found");
   return { supabase, user, profile: profile as Profile, club: club as Club };
 });
