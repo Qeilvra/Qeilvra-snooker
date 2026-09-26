@@ -1,0 +1,11 @@
+import Link from "next/link";
+import { deleteExpense } from "./actions";
+import { getAppContext, dateInTimezone } from "@/lib/data";
+import { can } from "@/lib/permissions";
+import { formatMoney } from "@/lib/format";
+import { ExpenseForm } from "@/components/expense-form";
+import { EmptyState } from "@/components/empty-state";
+import { ConfirmSubmit } from "@/components/confirm-submit";
+
+export const metadata={title:"Expenses"};export const dynamic="force-dynamic";
+export default async function ExpensesPage({searchParams}:{searchParams:Promise<{edit?:string}>}){const{supabase,club,profile}=await getAppContext();const params=await searchParams;const{data}=await supabase.from("expenses").select("*,profiles!expenses_created_by_fkey(full_name)").order("expense_date",{ascending:false}).limit(100);const expenses=data??[];const total=expenses.reduce((s,e)=>s+Number(e.amount),0);const editing=expenses.find(e=>e.id===params.edit);return <><div className="page-head"><div><h1 className="page-title">Expenses</h1><p className="page-subtitle">Operational costs included in net revenue reporting.</p></div><div><span className="help">Visible total</span><div className="metric-value">{formatMoney(total,club.currency)}</div></div></div><div className={can(profile.role,"expenses.manage")?"split-layout":""}><section className="panel">{expenses.length?<div className="table-wrap"><table className="data-table"><thead><tr><th>Date</th><th>Category</th><th>Description</th><th>Method</th><th>Staff</th><th>Amount</th><th></th></tr></thead><tbody>{expenses.map(e=><tr key={e.id}><td>{e.expense_date}</td><td>{e.category}</td><td>{e.description}</td><td>{e.payment_method}</td><td>{e.profiles?.full_name}</td><td><strong>{formatMoney(e.amount,club.currency)}</strong></td><td><div style={{display:"flex",gap:5}}><Link className="btn btn-sm" href={`/expenses?edit=${e.id}`}>Edit</Link><form action={deleteExpense}><input type="hidden" name="id" value={e.id}/><ConfirmSubmit className="btn btn-danger btn-sm" message={`Delete the expense “${e.description}”?`}>Delete</ConfirmSubmit></form></div></td></tr>)}</tbody></table></div>:<EmptyState title="No expenses recorded."/>}</section>{can(profile.role,"expenses.manage")&&<ExpenseForm today={dateInTimezone(new Date(),club.timezone)} expense={editing}/>}</div></>}
