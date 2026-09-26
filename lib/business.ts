@@ -1,12 +1,3 @@
-export type BillingPrecision = 1 | 5 | 15 | 60;
-
-export function calculateTableCharge(start: Date, end: Date, hourlyRate: number, pausedSeconds = 0, precision: BillingPrecision = 1) {
-  if (end < start || hourlyRate < 0 || pausedSeconds < 0) throw new Error("Invalid billing values");
-  const elapsedMinutes = Math.max(0, (end.getTime() - start.getTime()) / 60000 - pausedSeconds / 60);
-  const billableMinutes = Math.ceil(elapsedMinutes / precision) * precision;
-  return Math.round((billableMinutes / 60) * hourlyRate * 100) / 100;
-}
-
 export function bookingsOverlap(aStart: Date, aEnd: Date, bStart: Date, bEnd: Date) {
   if (aEnd <= aStart || bEnd <= bStart) throw new Error("End time must be after start time");
   return aStart < bEnd && bStart < aEnd;

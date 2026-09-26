@@ -1,15 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { bookingsOverlap, calculateOrderTotal, calculateTableCharge, deductInventory, tableStatusAfterSessionClose } from "../lib/business";
+import { bookingsOverlap, calculateOrderTotal, deductInventory, tableStatusAfterSessionClose } from "../lib/business";
 import { can } from "../lib/permissions";
-
-describe("hourly billing", () => {
-  it("bills actual per-minute usage", () => {
-    expect(calculateTableCharge(new Date("2026-01-01T10:00:00Z"), new Date("2026-01-01T11:30:00Z"), 1200)).toBe(1800);
-  });
-  it("supports configured rounding", () => {
-    expect(calculateTableCharge(new Date("2026-01-01T10:00:00Z"), new Date("2026-01-01T10:06:00Z"), 600, 0, 5)).toBe(100);
-  });
-});
 
 describe("booking overlap", () => {
   it("detects intersecting ranges but permits touching ranges", () => {

@@ -17,7 +17,7 @@ export function TableCard({ table, currency, timezone, compact = false }: { tabl
     <div className="table-info">
       <div className="table-name-row"><span className="table-name">{table.name}</span>{session && <span className="timer"><SessionTimer startedAt={session.start_time} pausedSeconds={session.total_paused_seconds}/></span>}</div>
       <span className={`status ${effectiveStatus}`}>{statusLabel}</span>
-      <div className="rate">{booking ? `Starts ${formatTime(booking.start_time, timezone)}` : `${formatMoney(table.hourly_rate,currency)} / hour`}</div>
+      <div className="rate">{booking ? `Starts ${formatTime(booking.start_time, timezone)}` : `${formatMoney(table.game_rate,currency)} / game`}</div>
       <div className="card-actions">
         {effectiveStatus === "available" && <><Link className="btn btn-sm" href={`/bookings?table=${table.id}`}><CalendarPlus size={14}/>Book</Link><form action={startSession} style={{flex:1}}><input type="hidden" name="tableId" value={table.id}/><button className="btn btn-primary btn-sm btn-block" type="submit"><Play size={14}/>Start</button></form></>}
         {session && <><Link className="btn btn-sm" href={`/pos?session=${session.id}`}>Add items</Link><form action={endSession} style={{flex:1}}><input type="hidden" name="sessionId" value={session.id}/><ConfirmSubmit className="btn btn-danger btn-sm btn-block" message={`End the active session on ${table.name}?`}><Square size={13}/>End</ConfirmSubmit></form></>}

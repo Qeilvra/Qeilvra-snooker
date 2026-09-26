@@ -31,7 +31,7 @@ export interface SnookerTable {
   name: string;
   table_number: number;
   description: string | null;
-  hourly_rate: number;
+  game_rate: number;
   status: TableStatus;
   sort_order: number;
   is_active: boolean;
@@ -46,7 +46,7 @@ export interface TableSession {
   start_time: string;
   end_time: string | null;
   total_paused_seconds: number;
-  hourly_rate: number;
+  game_rate: number;
   table_charge: number;
   status: SessionStatus;
   customers?: { full_name: string } | null;
@@ -63,7 +63,7 @@ export interface Booking {
   start_time: string;
   end_time: string;
   duration_minutes: number;
-  hourly_rate: number;
+  game_rate: number;
   estimated_amount: number;
   status: "pending" | "confirmed" | "active" | "completed" | "cancelled" | "no_show";
   notes: string | null;

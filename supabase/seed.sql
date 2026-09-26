@@ -8,7 +8,7 @@ begin
   insert into public.clubs(id,name,phone,email,address,currency,timezone)
   values(v_club,'Qeilvra Demo Club','+92 300 0000000','club@example.com','Lahore, Pakistan','PKR','Asia/Karachi') on conflict do nothing;
 
-  insert into public.snooker_tables(club_id,name,table_number,hourly_rate,sort_order)
+  insert into public.snooker_tables(club_id,name,table_number,game_rate,sort_order)
   select v_club,'Table ' || n,n,case when n <= 4 then 1200 else 1500 end,n from generate_series(1,8) n on conflict do nothing;
 
   insert into public.product_categories(id,club_id,name,sort_order) values
