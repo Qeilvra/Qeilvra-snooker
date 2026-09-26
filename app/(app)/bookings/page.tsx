@@ -22,7 +22,7 @@ export default async function BookingsPage({ searchParams }: { searchParams: Pro
   const date = params.date ?? dateInTimezone(new Date(), club.timezone);
   const [{data:tablesData},{data:bookingsData}] = await Promise.all([
     supabase.from("snooker_tables").select("*").eq("is_active",true).order("sort_order"),
-    supabase.from("bookings").select("*,snooker_tables(name)").eq("booking_date",date).order("start_time"),
+    supabase.from("bookings").select("*,snooker_tables:snooker_tables!bookings_table_same_club(name)").eq("booking_date",date).order("start_time"),
   ]);
   const tables=(tablesData??[]) as SnookerTable[];
   const bookings=(bookingsData??[]) as Booking[];

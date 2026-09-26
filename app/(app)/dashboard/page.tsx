@@ -18,11 +18,11 @@ export default async function DashboardPage() {
   const today = dateInTimezone(now,club.timezone);
   const dayStart = localDayStartIso(now,club.timezone);
   const [tablesResult, bookingsResult, sessionsResult, ordersResult, productsResult, settingsResult] = await Promise.all([
-    supabase.from("snooker_tables").select("*, table_sessions(id,table_id,start_time,end_time,total_paused_seconds,hourly_rate,table_charge,status), bookings(id,table_id,customer_name,customer_phone,booking_date,start_time,end_time,duration_minutes,hourly_rate,estimated_amount,status,notes)").eq("is_active",true).in("table_sessions.status",["active","paused"]).eq("bookings.status","confirmed").gte("bookings.start_time",now.toISOString()).lte("bookings.start_time",reservationHorizon).order("sort_order"),
-    supabase.from("bookings").select("*, snooker_tables(name)").eq("booking_date",today).order("start_time").limit(5),
-    supabase.from("table_sessions").select("*, customers(full_name), snooker_tables(name)").in("status",["active","paused"]).order("start_time").limit(6),
-    supabase.from("orders").select("*, snooker_tables(name)").eq("order_status","completed").gte("created_at",dayStart).order("created_at",{ascending:false}).limit(6),
-    supabase.from("products").select("*, product_categories(name)").eq("is_active",true).order("name").limit(40),
+    supabase.from("snooker_tables").select("*, table_sessions:table_sessions!sessions_table_same_club(id,table_id,start_time,end_time,total_paused_seconds,hourly_rate,table_charge,status), bookings:bookings!bookings_table_same_club(id,table_id,customer_name,customer_phone,booking_date,start_time,end_time,duration_minutes,hourly_rate,estimated_amount,status,notes)").eq("is_active",true).in("table_sessions.status",["active","paused"]).eq("bookings.status","confirmed").gte("bookings.start_time",now.toISOString()).lte("bookings.start_time",reservationHorizon).order("sort_order"),
+    supabase.from("bookings").select("*, snooker_tables:snooker_tables!bookings_table_same_club(name)").eq("booking_date",today).order("start_time").limit(5),
+    supabase.from("table_sessions").select("*, customers:customers!sessions_customer_same_club(full_name), snooker_tables:snooker_tables!sessions_table_same_club(name)").in("status",["active","paused"]).order("start_time").limit(6),
+    supabase.from("orders").select("*, snooker_tables:snooker_tables!orders_table_same_club(name)").eq("order_status","completed").gte("created_at",dayStart).order("created_at",{ascending:false}).limit(6),
+    supabase.from("products").select("*, product_categories:product_categories!products_category_same_club(name)").eq("is_active",true).order("name").limit(40),
     supabase.from("club_settings").select("key,value").in("key",["tax_rate","billing_precision"]),
   ]);
   const tables = (tablesResult.data ?? []) as SnookerTable[];

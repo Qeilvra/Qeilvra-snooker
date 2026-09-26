@@ -20,7 +20,7 @@ export default async function SearchPage({ searchParams }: { searchParams: Promi
   const [tableR, customerR, bookingR, orderR] = await Promise.all([
     supabase.from("snooker_tables").select("id,name,table_number,status").or(`name.ilike.%${q}%${Number.isFinite(numeric) ? `,table_number.eq.${numeric}` : ""}`).limit(10),
     supabase.from("customers").select("id,full_name,phone,email").or(`full_name.ilike.%${q}%,phone.ilike.%${q}%`).limit(10),
-    supabase.from("bookings").select("id,customer_name,start_time,status,snooker_tables(name)").ilike("customer_name", `%${q}%`).limit(10),
+    supabase.from("bookings").select("id,customer_name,start_time,status,snooker_tables:snooker_tables!bookings_table_same_club(name)").ilike("customer_name", `%${q}%`).limit(10),
     supabase.from("orders").select("id,order_number,total_amount,created_at").ilike("order_number", `%${q}%`).limit(10),
   ]);
   const tables = (tableR.data ?? []) as TableResult[];
