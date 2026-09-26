@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { Bell, CalendarDays, ChartNoAxesColumnIncreasing, ClipboardList, CreditCard, LayoutDashboard, LogOut, MoreHorizontal, Package, Search, Settings, Table2, UserRound, UsersRound, WalletCards } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
@@ -16,12 +17,14 @@ const nav = [
   ["/expenses", "Expenses", WalletCards], ["/settings", "Settings", Settings],
 ] as const;
 
-const mobile = [["/dashboard","Home",LayoutDashboard],["/tables","Tables",Table2],["/pos","POS",CreditCard],["/orders","Orders",ClipboardList],["/settings","More",MoreHorizontal]] as const;
+const mobile = [["/dashboard","Home",LayoutDashboard],["/tables","Tables",Table2],["/pos","POS",CreditCard],["/orders","Orders",ClipboardList]] as const;
 
 export function AppShell({ profile, club, children }: { profile: Profile; club: Club; children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const initial = profile.full_name.charAt(0).toUpperCase();
+  const mobileMoreActive = !mobile.some(([href]) => pathname === href);
   async function logout() {
     await createClient().auth.signOut();
     router.replace("/login");
@@ -50,7 +53,12 @@ export function AppShell({ profile, club, children }: { profile: Profile; club: 
         </header>
         <header className="mobile-topbar"><Brand/><Link href="/notifications" className="icon-button" aria-label="Notifications"><Bell size={21}/><span className="notification-dot"/></Link><span className="avatar">{initial}</span></header>
         <div className="content">{children}</div>
-        <nav className="mobile-nav" aria-label="Mobile navigation">{mobile.map(([href,label,Icon]) => <Link key={href} href={href} className={pathname === href ? "active" : ""}><Icon size={21}/><span>{label}</span></Link>)}</nav>
+        {mobileMenuOpen && <div className="mobile-menu-backdrop" onClick={() => setMobileMenuOpen(false)} />}
+        <nav className="mobile-nav" aria-label="Mobile navigation">
+          {mobile.map(([href,label,Icon]) => <Link key={href} href={href} className={pathname === href ? "active" : ""}><Icon size={21}/><span>{label}</span></Link>)}
+          <button type="button" className={mobileMoreActive ? "active" : ""} onClick={() => setMobileMenuOpen((open) => !open)} aria-expanded={mobileMenuOpen} aria-controls="mobile-menu"><MoreHorizontal size={21}/><span>More</span></button>
+        </nav>
+        {mobileMenuOpen && <section className="mobile-menu" id="mobile-menu" aria-label="More navigation"><div className="mobile-menu-head"><strong>More</strong><button type="button" className="icon-button" onClick={() => setMobileMenuOpen(false)} aria-label="Close menu">×</button></div><div className="mobile-menu-links">{nav.map(([href,label,Icon]) => <Link key={href} href={href} onClick={() => setMobileMenuOpen(false)} className={pathname === href ? "active" : ""}><Icon size={20}/><span>{label}</span></Link>)}</div></section>}
       </main>
     </div>
   );
