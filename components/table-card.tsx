@@ -21,7 +21,7 @@ export function TableCard({ table, currency, timezone, compact = false }: { tabl
       <div className="rate">{booking ? `Starts ${formatTime(booking.start_time, timezone)}` : `${formatMoney(table.game_rate,currency)} / game`}</div>
       <div className="card-actions">
         {effectiveStatus === "available" && <><Link className="btn btn-sm" href={`/bookings?table=${table.id}`}><CalendarPlus size={14}/>Book</Link><StartSessionButton tableId={table.id}/></>}
-        {session && <><Link className="btn btn-sm" href={`/pos?session=${session.id}`}>Add items</Link><form action={endSession} style={{flex:1}}><input type="hidden" name="sessionId" value={session.id}/><ConfirmSubmit className="btn btn-danger btn-sm btn-block" message={`End the active session on ${table.name}?`}><Square size={13}/>End</ConfirmSubmit></form></>}
+        {session && <><Link className="btn btn-sm" href={`/pos?session=${session.id}`}>Add items</Link><form action={endSession} style={{flex:1}}><input type="hidden" name="sessionId" value={session.id}/><ConfirmSubmit className="btn btn-danger btn-sm btn-block" message={`End the active session on ${table.name}?`} pendingText="Ending…"><Square size={13}/>End</ConfirmSubmit></form></>}
         {effectiveStatus === "reserved" && <Link className="btn btn-blue btn-sm btn-block" href={`/bookings?table=${table.id}`}>View booking</Link>}
         {(table.status === "maintenance" || table.status === "inactive") && !compact && <Link className="btn btn-sm btn-block" href={`/tables?edit=${table.id}`}>Manage table</Link>}
       </div>
