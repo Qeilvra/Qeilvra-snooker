@@ -5,12 +5,14 @@ import type { Club, Profile } from "@/types/domain";
 
 export const getAuthenticatedContext = cache(async () => {
   const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) redirect("/login");
-  const { data: profile } = await supabase.from("profiles").select("*").eq("auth_user_id", user.id).eq("is_active", true).single();
-  if (!profile) return { supabase, user, profile: null, club: null };
-  const { data: club } = await supabase.from("clubs").select("*").eq("id", profile.club_id).single();
-  return { supabase, user, profile, club };
+  const { data: claimsData } = await supabase.auth.getClaims();
+  const userId = claimsData?.claims.sub;
+  if (!userId) redirect("/login");
+  const user = { id: userId };
+  const { data } = await supabase.from("profiles").select("id,auth_user_id,club_id,full_name,email,phone,role,avatar_url,is_active,clubs:clubs!profiles_club_id_fkey(id,name,currency,timezone,phone,email,address,logo_url)").eq("auth_user_id", userId).eq("is_active", true).single();
+  if (!data) return { supabase, user, profile: null, club: null };
+  const { clubs, ...profile } = data as unknown as Profile & { clubs: Club | null };
+  return { supabase, user, profile, club: clubs };
 });
 
 export const getAppContext = cache(async () => {

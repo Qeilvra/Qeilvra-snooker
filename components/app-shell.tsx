@@ -1,14 +1,15 @@
 "use client";
 
 import Link from "next/link";
+import dynamic from "next/dynamic";
 import { useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { Bell, CalendarDays, ChartNoAxesColumnIncreasing, ClipboardList, CreditCard, LayoutDashboard, LogOut, MoreHorizontal, Package, Search, Settings, Table2, UserRound, UsersRound, WalletCards } from "lucide-react";
-import { createClient } from "@/lib/supabase/client";
 import { Brand } from "@/components/brand";
 import { LiveClock } from "@/components/live-clock";
 import type { Club, Profile } from "@/types/domain";
-import { RealtimeRefresh } from "@/components/realtime-refresh";
+
+const RealtimeRefresh = dynamic(() => import("@/components/realtime-refresh").then((module) => module.RealtimeRefresh), { ssr: false });
 
 const nav = [
   ["/dashboard", "Dashboard", LayoutDashboard], ["/tables", "Tables", Table2], ["/pos", "POS", CreditCard],
@@ -25,14 +26,16 @@ export function AppShell({ profile, club, children }: { profile: Profile; club: 
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const initial = profile.full_name.charAt(0).toUpperCase();
   const mobileMoreActive = !mobile.some(([href]) => pathname === href);
+  const realtimeEnabled = ["/dashboard", "/tables", "/pos", "/bookings", "/orders", "/inventory", "/reports", "/notifications"].includes(pathname);
   async function logout() {
+    const { createClient } = await import("@/lib/supabase/client");
     await createClient().auth.signOut();
     router.replace("/login");
     router.refresh();
   }
   return (
     <div className="app-shell">
-      <RealtimeRefresh clubId={club.id}/>
+      {realtimeEnabled && <RealtimeRefresh clubId={club.id}/>}
       <aside className="sidebar">
         <Brand />
         <nav className="nav-list" aria-label="Main navigation">

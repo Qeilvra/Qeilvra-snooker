@@ -6,7 +6,6 @@ import { TableBrowser } from "@/components/table-browser";
 import { PosPanel } from "@/components/pos-panel";
 import { EmptyState } from "@/components/empty-state";
 import { SessionTimer } from "@/components/session-timer";
-import { totalRecognizedRevenue } from "@/lib/revenue";
 import type { Booking, Order, Product, SnookerTable, TableSession } from "@/types/domain";
 
 export const metadata = { title: "Dashboard" };
@@ -18,27 +17,36 @@ export default async function DashboardPage() {
   const reservationHorizon = new Date(now.getTime() + 2 * 60 * 60 * 1000).toISOString();
   const today = dateInTimezone(now,club.timezone);
   const dayStart = localDayStartIso(now,club.timezone);
-  const [tablesResult, bookingsResult, sessionsResult, ordersResult, productsResult, settingsResult, revenueOrdersResult, completedSessionsResult, activeSessionCountResult] = await Promise.all([
-    supabase.from("snooker_tables").select("*, table_sessions:table_sessions!sessions_table_same_club(id,table_id,start_time,end_time,total_paused_seconds,game_rate,table_charge,status), bookings:bookings!bookings_table_same_club(id,table_id,customer_name,customer_phone,booking_date,start_time,end_time,duration_minutes,game_rate,estimated_amount,status,notes)").eq("is_active",true).in("table_sessions.status",["active","paused"]).eq("bookings.status","confirmed").gte("bookings.start_time",now.toISOString()).lte("bookings.start_time",reservationHorizon).order("sort_order"),
-    supabase.from("bookings").select("*, snooker_tables:snooker_tables!bookings_table_same_club(name)").eq("booking_date",today).order("start_time").limit(5),
-    supabase.from("table_sessions").select("*, customers:customers!sessions_customer_same_club(full_name), snooker_tables:snooker_tables!sessions_table_same_club(name)").in("status",["active","paused"]).order("start_time").limit(6),
-    supabase.from("orders").select("*, snooker_tables:snooker_tables!orders_table_same_club(name)").eq("order_status","completed").gte("created_at",dayStart).order("created_at",{ascending:false}).limit(6),
-    supabase.from("products").select("*, product_categories:product_categories!products_category_same_club(name)").eq("is_active",true).order("name").limit(40),
-    supabase.from("club_settings").select("key,value").eq("key","tax_rate"),
-    supabase.from("orders").select("total_amount,session_id,created_at").eq("order_status","completed").eq("payment_status","paid"),
-    supabase.from("table_sessions").select("id,table_charge,end_time").eq("status","completed"),
-    supabase.from("table_sessions").select("*", { count: "exact", head: true }).in("status",["active","paused"]),
+  const [tablesResult, bookingsResult, sessionsResult, ordersResult, productsResult, metricsResult] = await Promise.all([
+    supabase.from("snooker_tables").select("id,name,table_number,game_rate,status,sort_order,is_active,table_sessions:table_sessions!sessions_table_same_club(id,table_id,start_time,total_paused_seconds,game_rate,table_charge,status),bookings:bookings!bookings_table_same_club(id,table_id,start_time,status)").eq("is_active",true).in("table_sessions.status",["active","paused"]).eq("bookings.status","confirmed").gte("bookings.start_time",now.toISOString()).lte("bookings.start_time",reservationHorizon).order("sort_order"),
+    supabase.from("bookings").select("id,table_id,customer_name,start_time,status,snooker_tables:snooker_tables!bookings_table_same_club(name)").eq("booking_date",today).order("start_time").limit(5),
+    supabase.from("table_sessions").select("id,table_id,customer_id,start_time,total_paused_seconds,game_rate,table_charge,status,customers:customers!sessions_customer_same_club(full_name),snooker_tables:snooker_tables!sessions_table_same_club(name)").in("status",["active","paused"]).order("start_time").limit(6),
+    supabase.from("orders").select("id,order_number,total_amount,created_at,snooker_tables:snooker_tables!orders_table_same_club(name)").eq("order_status","completed").gte("created_at",dayStart).order("created_at",{ascending:false}).limit(6),
+    supabase.from("products").select("id,category_id,name,price,stock_quantity,track_inventory,product_categories:product_categories!products_category_same_club(name)").eq("is_active",true).order("name").limit(40),
+    supabase.rpc("get_dashboard_metrics").single(),
   ]);
   const tables = (tablesResult.data ?? []) as SnookerTable[];
-  const bookings = (bookingsResult.data ?? []) as Booking[];
-  const sessions = (sessionsResult.data ?? []) as TableSession[];
-  const orders = (ordersResult.data ?? []) as Order[];
-  const products = (productsResult.data ?? []) as Product[];
-  const revenue = totalRecognizedRevenue(revenueOrdersResult.data ?? [], completedSessionsResult.data ?? []);
-  const activeSessionCount = activeSessionCountResult.count ?? sessions.length;
+  const bookings = (bookingsResult.data ?? []) as unknown as Booking[];
+  const sessions = (sessionsResult.data ?? []) as unknown as TableSession[];
+  const orders = (ordersResult.data ?? []) as unknown as Order[];
+  const products = (productsResult.data ?? []) as unknown as Product[];
+  let metrics = metricsResult.data as { total_revenue: number; active_session_count: number; tax_rate: number } | null;
+  if (metricsResult.error || !metrics) {
+    const [{ data: paidOrders }, { data: completedSessions }, { count }, { data: settingsData }] = await Promise.all([
+      supabase.from("orders").select("total_amount,session_id").eq("order_status","completed").eq("payment_status","paid"),
+      supabase.from("table_sessions").select("id,table_charge").eq("status","completed"),
+      supabase.from("table_sessions").select("id", { count: "exact", head: true }).in("status",["active","paused"]),
+      supabase.from("club_settings").select("value").eq("key","tax_rate").maybeSingle(),
+    ]);
+    const settled = new Set((paidOrders ?? []).flatMap((order) => order.session_id ? [order.session_id] : []));
+    const totalRevenue = (paidOrders ?? []).reduce((sum, order) => sum + Number(order.total_amount), 0)
+      + (completedSessions ?? []).filter((session) => !settled.has(session.id)).reduce((sum, session) => sum + Number(session.table_charge), 0);
+    metrics = { total_revenue: totalRevenue, active_session_count: count ?? sessions.length, tax_rate: Number(settingsData?.value ?? 0) };
+  }
+  const revenue = Number(metrics.total_revenue);
+  const activeSessionCount = Number(metrics.active_session_count);
   const usage = tables.length ? Math.round((activeSessionCount/tables.length)*100) : 0;
   const activePosSession = sessions[0] ?? null;
-  const settings=Object.fromEntries((settingsResult.data??[]).map(x=>[x.key,x.value]));
   const firstName = profile.full_name.split(" ")[0];
   return <>
     <div className="page-head" style={{display:"none"}}><div><h1 className="page-title">Dashboard</h1></div></div>
@@ -54,7 +62,7 @@ export default async function DashboardPage() {
         <section className="quick-access"><h2>Quick Access</h2><div>{[["/tables","Tables",Table2],["/bookings","Bookings",CalendarDays],["/pos","POS",CreditCard],["/orders","Orders",WalletCards],["/inventory","Inventory",Package],["/reports","Reports",ChartNoAxesColumnIncreasing]].map(([href,label,Icon])=><Link href={String(href)} key={String(href)}><Icon size={27}/><span>{String(label)}</span></Link>)}</div></section>
         <TableBrowser tables={tables} currency={club.currency} timezone={club.timezone}/>
       </div>
-      <PosPanel products={products} session={activePosSession} currency={club.currency} role={profile.role} taxRate={Number(settings.tax_rate??0)}/>
+      <PosPanel products={products} session={activePosSession} currency={club.currency} role={profile.role} taxRate={Number(metrics.tax_rate)}/>
       <div className="data-panels">
         <SummaryPanel title="Today’s Bookings" href="/bookings" empty="No bookings today.">{bookings.map((booking)=><div className="data-row" key={booking.id}><strong>{formatTime(booking.start_time,club.timezone)}</strong><span>{booking.snooker_tables?.name}</span><span>{booking.customer_name}</span><span className={`badge ${booking.status==="confirmed"?"green":booking.status==="pending"?"amber":"blue"}`}>{booking.status}</span></div>)}</SummaryPanel>
         <SummaryPanel title="Active Sessions" href="/tables" empty="No active sessions.">{sessions.map((session)=><div className="data-row" key={session.id}><span className="badge red">{session.snooker_tables?.name}</span><span>{session.customers?.full_name ?? "Walk-in"}</span><span><SessionTimer startedAt={session.start_time} pausedSeconds={session.total_paused_seconds}/></span><Link className="btn btn-danger btn-sm" href={`/pos?session=${session.id}`}>Settle</Link></div>)}</SummaryPanel>
